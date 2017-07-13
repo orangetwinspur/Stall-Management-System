@@ -393,23 +393,32 @@ class Controller extends BaseController
     }
     
     function addStallRate(){
-        $i = 1;
-        foreach($_POST['rate'] as $rate){
-            $newrate = new StallRate;
-            $newrate->sratePrice = ($rate == '') ? 0 : $rate;
-            $newrate->srateDay = $i;
-            $newrate->stypeID = $_POST['stype'];
-            $newrate->save();
-            $i++;
-        }
+        $rate = new StallRate;
+        $rate->bldgID = ($_POST['bldgID'] == 0) ? null : $_POST['bldgID'];
+        $rate->stypeID = $_POST['stypeID'];
+        $rate->sratePrice = $_POST['amt'];
+        $rate->collection = $_POST['collection'];
+        $rate->save();
     }
     
     function getStallRates(){
-    	$rates = StallType::with('StallRate')->has('StallRate','>','0')->get();
+    	$rates = StallRate::with('StallType','Building')->get();
     	$data = array();
     	foreach ($rates as $rate) {
-            $rate['actions'] = "<button class='btn btn-success' onclick='getInfo(this.value)' value = '".$rate['stypeID']."' ><span class='glyphicon glyphicon-pencil'></span> Update</button>
+            $rate['actions'] = "<button class='btn btn-success' onclick='getInfo(this.value)' value = '".$rate['srateID']."' ><span class='glyphicon glyphicon-pencil'></span> Update</button>
             ";
+            switch($rate['collection']){
+                case 1 :
+                    $rate['collection'] = 'Daily';
+                    break;
+                case 2 :
+                    $rate['collection'] = 'Weekly';
+                    break;
+                case 3 :
+                    $rate['collection'] = 'Monthly';
+                    break;
+                    
+            }
     		$data['data'][] = $rate;
     	}
     	if(count($data) == 0){
@@ -427,22 +436,21 @@ class Controller extends BaseController
     }
     
     function getRateInfo(){
-        $rate = StallType::with('StallRate')->where('stypeID',$_POST['id'])->get();
+        $rate = StallRate::with('Building','StallType')->where('srateID',$_POST['id'])->get();
         return (json_encode($rate));
     }
     
     function updateRate(){
         $changed = 'false';
-        for($i = 1;$i < 8;$i++){
-            $index = (string) $i;
-            $rate = StallRate::where('stypeID',$_POST['stype'])->where('srateDay',$i)->first();
-            $rate->sratePrice = ($_POST[$index] == '') ? 0 : $_POST[$index];
-            if($rate->isDirty()){
-                $rate->save();
-                $changed = 'true';
-            }
+        $rate = StallRate::where('srateID',$_POST['id'])->first();
+        $rate->bldgID = ($_POST['bldgID'] == 0) ? null : $_POST['bldgID'];
+        $rate->sratePrice = $_POST['amt'];
+        $rate->collection = $_POST['collection'];
+        if($rate->isDirty()){
+            $rate->save();
+            $changed = 'true';   
         }
-        return $changed;
+        echo $changed;
     }
     
     function getFees(){
